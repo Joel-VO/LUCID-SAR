@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import PIL
+import PIL.Image as Image
 import cv2
 import tqdm as tqdm
 from torchvision import transforms as transforms
@@ -23,21 +23,21 @@ class DenoisingDataset(Dataset):
         self.transform = img_transforms
 
 
-        self.clean_image = sorted([f for f in os.listdir(self.gtruth_dir) if f.endwith(('.png', '.jpg', '.jpeg', '.tif', '.tiff'))])
-        self.noisy_image = sorted([f for f in os.listdir(self.noisy_dir) if f.endwith(('.png', '.jpg', '.jpeg', '.tif', '.tiff'))])
+        self.clean_image = sorted([f for f in os.listdir(self.gtruth_dir) if f.endswith(('.png', '.jpg', '.jpeg', '.tif', '.tiff'))])
+        self.noisy_image = sorted([f for f in os.listdir(self.noisy_dir) if f.endswith(('.png', '.jpg', '.jpeg', '.tif', '.tiff'))])
 
         
-        assert len(self.clean_image) == len(noisy_image), "The data sizes dont match"
+        assert len(self.clean_image) == len(self.noisy_image), "The data sizes dont match"
 
     def __len__(self):
-        return len(noisy_image)
+        return len(self.noisy_image)
 
     def __getitem__(self, idx):
-        noisy_path = self.noisy_dir / self.noisy_image[idx]
-        clean_path = self.gtruth_dir / self.clean_image[idx]
+        noisy_path = f"{self.noisy_dir}/{self.noisy_image[idx]}"
+        clean_path = f"{self.gtruth_dir}/{self.clean_image[idx]}"
         
-        noisy_img = Image.open(noisy_path)
-        clean_img = Image.open(clean_path)
+        noisy_img = Image.open(noisy_path).convert('L')
+        clean_img = Image.open(clean_path).convert('L')
 
 
         if self.transform:
@@ -71,6 +71,8 @@ class ID_CNN(nn.Module):
 
         self.relu = nn.ReLU()
 
+        # maybe add in googles inception modules to this so that pixel-localized, region-localized, and section localized are obtained.
+
     def forward(self, x):
 
         x = self.relu(self.convL1(x)) # Layer_1
@@ -87,13 +89,60 @@ class ID_CNN(nn.Module):
         return mask
 
 
-def training(epochs, optimizer, train_dataset, val_dataset, model, device='cuda'):
-    model
+def training(epochs, train_dataset, val_dataset, model, device='cuda'):
+
+    model = model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,mode='min', patience=5)
+    best_val_loss = float('inf')
+
+
     for epoch in tqdm.tqdm(range(epochs)):
         model.train()
-        
+        train_loss = 0.0
 
+        for noisy, clean in train_dataset:
+            noisy, clean = noisy.to(device), clean.to(device)
+
+            optimizer.zero_grad()
+            y_pred = model(noisy)
+            output = noisy/(y_pred + 1e-8)
+            loss = euclidean_TV_loss(y_pred=output, y_ground=clean)
+            loss.backward()
+            optimizer.step()
+            
+            train_loss += loss.item()
+
+        train_loss /= len(train_dataset)
+
+        
+        # Validation code
+        if epoch%5 == 0:
+            model.eval()
+            val_loss = 0.0
+            with torch.no_grad():
+                for noisy, clean in val_dataset:
+                    noisy, clean = noisy.to(device), clean.to(device)
+
+                    y_pred = model(noisy)
+                    output = noisy/(y_pred + 1e-8)
+                    loss = euclidean_TV_loss(y_pred=output, y_ground=clean)
+                
+                    val_loss += loss.item()
+
+            val_loss /= len(val_dataset)
+            scheduler.step(val_loss) # keeps track of val loss progression and changes lr based on that
+            
+            print(f'Epoch [{epoch+1}/{epochs}] '
+                f'Train Loss: {train_loss:.4f} '
+                f'Val Loss: {val_loss:.4f}')
+            
+            # Save best model
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                torch.save(model.state_dict(), 'SAR/models/best_denoising_model.pth')
+                print(f'Model saved with val loss: {val_loss:.4f}')
+            
 
 if __name__ == "__main__":
     EPOCHS = 200
@@ -124,10 +173,15 @@ if __name__ == "__main__":
     )
 
 
-    train_loader = DataLoader(train_dataset, batch_size=8, num_workers=4, shuffle=True)
-    val_loader = DataLoader(train_dataset, batch_size=8, num_workers=4, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=4, num_workers=4, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=4, num_workers=4, shuffle=False)
+
+    print("Dataset loaded successfully... ")
 
     model_idcnn = ID_CNN()
+    
+    print("Starting training... ")
+
 
     training(
         epochs=EPOCHS,
@@ -137,5 +191,4 @@ if __name__ == "__main__":
         device=device
     )
 
-
-
+    print("Completed Training...")
