@@ -3,10 +3,10 @@ import torch.nn as nn
 import torch.optim as optim
 import PIL
 import cv2
+import tqdm as tqdm
 
+from helpers.py import euclidean_TV_loss
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"Running on {device}")
 
 class ID_CNN(nn.Module):
     """Returns a mapping of the multiplicative noise that is divided from the image to provide a clear image."""
@@ -37,5 +37,21 @@ class ID_CNN(nn.Module):
 
         return x
 
-def training():
-    pass
+
+
+def training(device='cuda'):
+
+    model = ID_CNN()
+    loss = euclidean_TV_loss()
+    optimizer = optim.Adam(model.parameters(), lr=1e-4)
+
+    
+
+
+
+
+if __name__ == "__main__":
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    print(f"Running on {device}")
+
+    training(device=device)
