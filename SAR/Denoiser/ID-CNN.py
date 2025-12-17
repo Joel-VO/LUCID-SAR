@@ -117,7 +117,7 @@ def training(epochs, train_dataset, val_dataset, model, device='cuda'):
 
         
         # Validation code
-        if epoch%5 == 0:
+        if (epoch+1)%2 == 0:
             model.eval()
             val_loss = 0.0
             with torch.no_grad():
@@ -156,7 +156,7 @@ if __name__ == "__main__":
 
     img_transforms = transforms.Compose([
         transforms.Resize((512, 512)),
-        # transforms.Normalize(),
+        transforms.Grayscale(1),
         transforms.ToTensor()
     ])
 
@@ -192,3 +192,6 @@ if __name__ == "__main__":
     )
 
     print("Completed Training...")
+
+
+# if weight decay is present, use AdamW
