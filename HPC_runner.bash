@@ -4,7 +4,7 @@ echo "Running HPC worker"
 
 echo ""
 
-VENV_DIR="PULSAR"
+VENV_DIR="LUCID"
 
 if [ -d "$VENV_DIR" ]; then
     echo "Virtual environment '$VENV_DIR' exists... Activating..."

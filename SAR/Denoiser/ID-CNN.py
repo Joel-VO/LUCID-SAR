@@ -46,7 +46,29 @@ class DenoisingDataset(Dataset):
         
         return noisy_img, clean_img
 
+class Inception(nn.Module): # will have to complete
+    def __init__(self):
+        super(Inception, self).__init__()
 
+        self.kernel_1x1 = nn.Sequential(
+
+        )
+
+        self.kernel_3x3 = nn.Sequential(
+            
+        )
+
+        self.kernel_5x5 = nn.Sequential(
+            
+        )
+        
+        self.pooling = nn.Sequential(
+
+        )
+
+    def forward(self, x):
+
+        return
 
 class ID_CNN(nn.Module):
     """Returns a mapping of the multiplicative noise that is divided from the image to provide a clear image."""
