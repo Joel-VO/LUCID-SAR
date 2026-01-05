@@ -47,28 +47,49 @@ class DenoisingDataset(Dataset):
         return noisy_img, clean_img
 
 class Inception(nn.Module): # will have to complete
-    def __init__(self):
+    def __init__(self, in_channels, out_channels):
         super(Inception, self).__init__()
 
-        self.kernel_1x1 = nn.Sequential(
+        branch_channels = out_channels//4
 
+        self.kernel_1x1 = nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, out_channels=branch_channels, kernel_size=1),
+            nn.BatchNorm2d(branch_channels),
+            nn.ReLU()
         )
 
         self.kernel_3x3 = nn.Sequential(
-            
+            nn.Conv2d(in_channels=in_channels, out_channels=branch_channels, kernel_size=1),
+            nn.BatchNorm2d(branch_channels),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=branch_channels, out_channels=branch_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(branch_channels),
+            nn.ReLU()
         )
 
         self.kernel_5x5 = nn.Sequential(
-            
+            nn.Conv2d(in_channels=in_channels, out_channels=branch_channels, kernel_size=1),
+            nn.BatchNorm2d(branch_channels),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=branch_channels, out_channels=branch_channels, kernel_size=5, padding=2),
+            nn.BatchNorm2d(branch_channels),
+            nn.ReLU()
         )
         
         self.pooling = nn.Sequential(
-
+            nn.MaxPool2d(kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(in_channels, branch_channels, kernel_size=1),
+            nn.BatchNorm2d(branch_channels),
+            nn.ReLU()
         )
 
     def forward(self, x):
+        branch_1 = self.kernel_1x1(x)
+        branch_2 = self.kernel_3x3(x)
+        branch_3 = self.kernel_5x5(x)
+        branch_4 = self.pooling(x)
 
-        return
+        return torch.cat([branch_1, branch_2, branch_3, branch_4], dim=1)
 
 class ID_CNN(nn.Module):
     """Returns a mapping of the multiplicative noise that is divided from the image to provide a clear image."""
@@ -76,6 +97,11 @@ class ID_CNN(nn.Module):
         super(ID_CNN, self).__init__()
 
         self.convL1 = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=3 ,padding=1)
+
+        self.inception1 = Inception(64, 64)
+        self.inception2 = Inception(64, 64)
+        self.inception3 = Inception(64, 64)
+
         self.convL2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3 ,padding=1)
         self.convL3 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3 ,padding=1)
         self.convL4 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3 ,padding=1)
@@ -98,7 +124,9 @@ class ID_CNN(nn.Module):
     def forward(self, x):
 
         x = self.relu(self.convL1(x)) # Layer_1
-
+        x = self.inception1(x)
+        x = self.inception2(x)
+        x = self.inception3(x)
         x = self.relu(self.BatchNorm2(self.convL2(x))) # Layer_2 
         x = self.relu(self.BatchNorm3(self.convL3(x))) # Layer_3
         x = self.relu(self.BatchNorm4(self.convL4(x))) # Layer_4
@@ -114,7 +142,7 @@ class ID_CNN(nn.Module):
 def training(epochs, train_dataset, val_dataset, model, device='cuda'):
 
     model = model.to(device)
-    optimizer = optim.Adam(model.parameters(), lr=1e-4)
+    optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-5)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,mode='min', patience=5)
     best_val_loss = float('inf')
 
@@ -195,8 +223,8 @@ if __name__ == "__main__":
     )
 
 
-    train_loader = DataLoader(train_dataset, batch_size=4, num_workers=4, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=4, num_workers=4, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=2, num_workers=2, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=2, num_workers=2, shuffle=False)
 
     print("Dataset loaded successfully... ")
 
