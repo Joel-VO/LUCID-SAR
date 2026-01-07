@@ -5,3 +5,5 @@ scikit-learn
 datasets
 trl
 tqdm
+fastai
+IPython
