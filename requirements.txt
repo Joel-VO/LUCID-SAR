@@ -1,3 +1,4 @@
+streamlit
 numpy
 opencv-python
 pillow
@@ -7,4 +8,3 @@ trl
 tqdm
 fastai
 IPython
-streamlit
