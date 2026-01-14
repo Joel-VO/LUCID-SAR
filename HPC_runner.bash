@@ -11,7 +11,7 @@ if [ -d "$VENV_DIR" ]; then
     source "$VENV_DIR/bin/activate"
 else
     echo "Virtual environment '$VENV_DIR' does not exist. Creating new venv..."
-    if ! python3 -m venv "$VENV_DIR"; then
+    if ! python3.11 -m venv "$VENV_DIR"; then
         echo "Error: Failed to create the virtual environment '$VENV_DIR'." >&2
         exit 1
     fi
