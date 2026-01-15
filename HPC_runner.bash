@@ -27,7 +27,7 @@ else
     echo "Installation complete"
 fi
 
-mkdir -p models
+mkdir -p SAR/models
 mkdir -p Logs
 
 echo ""
