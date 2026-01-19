@@ -3,8 +3,8 @@ import torch
 import torch.nn as nn
 from torchvision.models import resnet34, ResNet34_Weights
 
-sar_path = Path("Dataset/SAR_Color Dataset/train/sar_images")
-opt_path = Path("Dataset/SAR_Color Dataset/train/rgb_images")
+sar_path = Path("Dataset/SAR_Color_Dataset/train/sar_images")
+opt_path = Path("Dataset/SAR_Color_Dataset/train/rgb_images")
 
 def get_optical(fn):
     return opt_path/fn.name

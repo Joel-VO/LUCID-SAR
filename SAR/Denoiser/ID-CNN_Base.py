@@ -147,10 +147,10 @@ if __name__ == "__main__":
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f"Running on {device}")
 
-    train_noisy_dir = "Dataset/SAR despeckling filters dataset/Main folder/Noisy"
-    train_gtruth_dir = "Dataset/SAR despeckling filters dataset/Main folder/GTruth"
-    val_noisy_dir = "Dataset/SAR despeckling filters dataset/Main folder/Noisy_val"
-    val_gtruth_dir = "Dataset/SAR despeckling filters dataset/Main folder/GTruth_val"
+    train_noisy_dir = "Dataset/SAR_despeckling_filters_Dataset/Main folder/Noisy"
+    train_gtruth_dir = "Dataset/SAR_despeckling_filters_Dataset/Main folder/GTruth"
+    val_noisy_dir = "Dataset/SAR_despeckling_filters_Dataset/Main folder/Noisy_val"
+    val_gtruth_dir = "Dataset/SAR_despeckling_filters_Dataset/Main folder/GTruth_val"
 
     img_transforms = transforms.Compose([
         transforms.Resize((512, 512)),
