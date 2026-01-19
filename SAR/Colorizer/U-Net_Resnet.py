@@ -18,7 +18,7 @@ sar_colorizer = DataBlock(
     batch_tfms=Normalize.from_stats(*imagenet_stats)
 )
 
-dls = sar_colorizer.dataloaders(sar_path, bs=2, num_workers=0) # worker count = 0 only for python 3.14, lower versions can have more
+dls = sar_colorizer.dataloaders(sar_path, bs=2, num_workers=4) # worker count = 0 only for python 3.14, lower versions can have more
 
 class SARWrapper(nn.Module):
     def __init__(self, model):

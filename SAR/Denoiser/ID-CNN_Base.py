@@ -171,8 +171,8 @@ if __name__ == "__main__":
     )
 
 
-    train_loader = DataLoader(train_dataset, batch_size=2, num_workers=2, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=2, num_workers=2, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=2, num_workers=8, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=2, num_workers=8, shuffle=False)
 
     print("Dataset loaded successfully... ")
 
