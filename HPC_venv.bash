@@ -20,11 +20,11 @@ else
     echo ""
     echo "Installing venv packages"
     echo ""
-    pip install --upgrade pip -q
+    pip install --upgrade pip
     echo "Updated pip"
-    pip install torch torchvision --index-url https://download.pytorch.org/whl/cu130 -q
+    pip install torch torchvision --index-url https://download.pytorch.org/whl/cu130
     echo "Installed Pytorch"
-    pip install -r requirements.txt -q
+    pip install -r requirements.txt
     echo ""
     echo "Installed requirements.txt"
     echo ""
