@@ -20,15 +20,21 @@ else
     echo ""
     echo "Installing venv packages"
     echo ""
-    pip install --upgrade pip -q
-    pip install torch torchvision --index-url https://download.pytorch.org/whl/cu130 -q
-    pip install -r requirements.txt -q
+    pip install --upgrade pip
+    echo "Updated pip"
+    pip3 install torch torchvision # for cuda 12.8
+    echo "Installed Pytorch"
+    pip install -r requirements.txt
+    echo ""
+    echo "Installed requirements.txt"
     echo ""
     echo "Installation complete"
 fi
 
 mkdir -p SAR/models
 mkdir -p Logs
+
+echo "complete"
 
 echo ""
 

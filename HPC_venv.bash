@@ -22,7 +22,7 @@ else
     echo ""
     pip install --upgrade pip
     echo "Updated pip"
-    pip install torch torchvision --index-url https://download.pytorch.org/whl/cu130
+    pip3 install torch torchvision # for cuda 12.8
     echo "Installed Pytorch"
     pip install -r requirements.txt
     echo ""
