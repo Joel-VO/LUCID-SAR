@@ -230,6 +230,7 @@ if __name__ == "__main__":
         model=model_idcnn, 
         device=device
     )
+    torch.save(model_idcnn, "/models/idcnn_inception_reduced.pt2")
 
     print("Completed Training...")
 

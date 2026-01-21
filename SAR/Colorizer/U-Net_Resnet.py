@@ -54,4 +54,4 @@ learn = Learner(
 
 learn.fine_tune(20, base_lr=1e-4)
 
-# learn.save("sar_colorizer_resnet34")
+learn.save("/models/sar_colorizer_unet_resnet34")
