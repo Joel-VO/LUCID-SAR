@@ -85,10 +85,10 @@ echo "Running SAR-Colorizer Branch"
 
 echo ""
 
-touch Logs/U-Net_Resnet
-echo "U-Net Colorizer"
-python3 SAR/Colorizer/U-Net_Resnet.py >> Logs/U-Net_Resnet
-echo "Ouput saved to Logs/U-Net_Resnet"
+# touch Logs/U-Net_Resnet
+# echo "U-Net Colorizer"
+# python3 SAR/Colorizer/U-Net_Resnet.py >> Logs/U-Net_Resnet
+# echo "Ouput saved to Logs/U-Net_Resnet"
 
 echo ""
 
