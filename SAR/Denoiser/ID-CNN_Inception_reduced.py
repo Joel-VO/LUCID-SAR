@@ -180,12 +180,12 @@ def training(epochs, train_dataset, val_dataset, model, device='cuda'):
             # Save best model
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
-                torch.save(model.state_dict(), 'SAR/models/best_denoising_model.pth')
+                torch.save(model.state_dict(), 'SAR/models/best_denoising_model_Inception_reduced.pth')
                 print(f'Model saved with val loss: {val_loss:.4f}')
             
 
 if __name__ == "__main__":
-    EPOCHS = 200
+    EPOCHS = 1
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f"Running on {device}")
 
@@ -230,7 +230,7 @@ if __name__ == "__main__":
         model=model_idcnn, 
         device=device
     )
-    torch.save(model_idcnn, "/models/idcnn_inception_reduced.pt2")
+    torch.save(model_idcnn.state_dict(), "SAR/models/idcnn_inception_reduced.pt2")
 
     print("Completed Training...")
 
