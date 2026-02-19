@@ -46,31 +46,34 @@ class DenoisingDataset(Dataset):
         
         return noisy_img, clean_img
 
-class Inception(nn.Module): # will have to complete
+class Inception(nn.Module): # try concatenating a plain channel back and see what happens, with 4 channels and one channel untouched.
     def __init__(self, in_channels, out_channels):
         super(Inception, self).__init__()
 
-        branch_channels = out_channels//3
+        
+        branch_channels_1 = out_channels//3
+        branch_channels_2 = out_channels//3
+        branch_channels_3 = out_channels - (branch_channels_1 + branch_channels_2)
 
         self.kernel_1x1 = nn.Sequential(
-            nn.Conv2d(in_channels=in_channels, out_channels=branch_channels, kernel_size=1),
-            nn.BatchNorm2d(branch_channels),
+            nn.Conv2d(in_channels=in_channels, out_channels=branch_channels_1, kernel_size=1),
+            nn.BatchNorm2d(branch_channels_1),
             nn.ReLU()
         )
 
         self.kernel_3x3 = nn.Sequential(
-            nn.Conv2d(in_channels=in_channels, out_channels=branch_channels, kernel_size=1),
-            nn.BatchNorm2d(branch_channels),
+            nn.Conv2d(in_channels=in_channels, out_channels=branch_channels_2, kernel_size=1),
+            nn.BatchNorm2d(branch_channels_2),
             nn.ReLU(),
-            nn.Conv2d(in_channels=branch_channels, out_channels=branch_channels, kernel_size=3, padding=1),
-            nn.BatchNorm2d(branch_channels),
+            nn.Conv2d(in_channels=branch_channels_2, out_channels=branch_channels_2, kernel_size=3, padding=1),
+            nn.BatchNorm2d(branch_channels_2),
             nn.ReLU()
         )
         
         self.pooling = nn.Sequential(
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1),
-            nn.Conv2d(in_channels, branch_channels, kernel_size=1),
-            nn.BatchNorm2d(branch_channels),
+            nn.Conv2d(in_channels, branch_channels_3, kernel_size=1),
+            nn.BatchNorm2d(branch_channels_3),
             nn.ReLU()
         )
 
@@ -185,7 +188,7 @@ def training(epochs, train_dataset, val_dataset, model, device='cuda'):
             
 
 if __name__ == "__main__":
-    EPOCHS = 1
+    EPOCHS = 200
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f"Running on {device}")
 
@@ -230,7 +233,7 @@ if __name__ == "__main__":
         model=model_idcnn, 
         device=device
     )
-    torch.save(model_idcnn.state_dict(), "SAR/models/idcnn_inception_reduced.pt2")
+    torch.save(model_idcnn.state_dict(), "SAR/models/idcnn_inception_reduced.pth")
 
     print("Completed Training...")
 
