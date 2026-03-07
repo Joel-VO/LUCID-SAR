@@ -6,14 +6,14 @@ import cv2
 import os
 from torchvision import transforms
 from skimage.metrics import peak_signal_noise_ratio as psnr
-from skimage.metrics import structural_similarity as ssim
+from pytorch_msssim import ssim as pt_ssim
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
-WEIGHTS_PATH  = "SAR/models/idcnn_inception_full.pth"
-NOISY_DIR     = "Dataset/SAR_despeckling_filters_Dataset/Main folder/Noisy_val"
-GTRUTH_DIR    = "Dataset/SAR_despeckling_filters_Dataset/Main folder/GTruth_val"
-RESIZE        = (512, 512)   # set None to keep original size
-DEVICE        = "cuda" if torch.cuda.is_available() else "cpu"
+WEIGHTS_PATH = "SAR/models/model_base/idcnn_inception_full.pth"
+NOISY_DIR    = "Dataset/SAR_despeckling_filters_Dataset/Main folder/Noisy_val"
+GTRUTH_DIR   = "Dataset/SAR_despeckling_filters_Dataset/Main folder/GTruth_val"
+RESIZE       = (512, 512)
+DEVICE       = "cuda" if torch.cuda.is_available() else "cpu"
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -41,24 +41,24 @@ class Inception(nn.Module):
 class ID_CNN(nn.Module):
     def __init__(self):
         super().__init__()
-        self.convL1 = nn.Conv2d(1,  64, 3, padding=1)
+        self.convL1     = nn.Conv2d(1,  64, 3, padding=1)
         self.inception1 = Inception(64, 64)
         self.inception2 = Inception(64, 64)
         self.inception3 = Inception(64, 64)
-        self.convL2 = nn.Conv2d(64, 64, 3, padding=1)
-        self.convL3 = nn.Conv2d(64, 64, 3, padding=1)
-        self.convL4 = nn.Conv2d(64, 64, 3, padding=1)
-        self.convL5 = nn.Conv2d(64, 64, 3, padding=1)
-        self.convL6 = nn.Conv2d(64, 64, 3, padding=1)
-        self.convL7 = nn.Conv2d(64, 64, 3, padding=1)
-        self.convL8 = nn.Conv2d(64,  1, 3, padding=1)
+        self.convL2     = nn.Conv2d(64, 64, 3, padding=1)
+        self.convL3     = nn.Conv2d(64, 64, 3, padding=1)
+        self.convL4     = nn.Conv2d(64, 64, 3, padding=1)
+        self.convL5     = nn.Conv2d(64, 64, 3, padding=1)
+        self.convL6     = nn.Conv2d(64, 64, 3, padding=1)
+        self.convL7     = nn.Conv2d(64, 64, 3, padding=1)
+        self.convL8     = nn.Conv2d(64,  1, 3, padding=1)
         self.BatchNorm2 = nn.BatchNorm2d(64)
         self.BatchNorm3 = nn.BatchNorm2d(64)
         self.BatchNorm4 = nn.BatchNorm2d(64)
         self.BatchNorm5 = nn.BatchNorm2d(64)
         self.BatchNorm6 = nn.BatchNorm2d(64)
         self.BatchNorm7 = nn.BatchNorm2d(64)
-        self.relu = nn.ReLU()
+        self.relu       = nn.ReLU()
 
     def forward(self, x):
         x = self.relu(self.convL1(x))
@@ -77,7 +77,6 @@ class ID_CNN(nn.Module):
 # ── Metrics ───────────────────────────────────────────────────────────────────
 
 def compute_enl(img: np.ndarray) -> float:
-    """ENL on a flat central crop (10% of image)."""
     h, w = img.shape
     cy, cx = h // 2, w // 2
     ch, cw = max(1, h // 10), max(1, w // 10)
@@ -87,15 +86,19 @@ def compute_enl(img: np.ndarray) -> float:
 
 
 def compute_epi(noisy: np.ndarray, denoised: np.ndarray) -> float:
-    """Edge Preservation Index: correlation of Sobel edge maps."""
     sobel = lambda img: cv2.Sobel(img.astype(np.float64), cv2.CV_64F, 1, 0) + \
                         cv2.Sobel(img.astype(np.float64), cv2.CV_64F, 0, 1)
     e_n, e_d = sobel(noisy).flatten(), sobel(denoised).flatten()
-    denom = np.std(e_n) * np.std(e_d)
-    return float(np.corrcoef(e_n, e_d)[0, 1]) if denom > 0 else 0.0
+    return float(np.corrcoef(e_n, e_d)[0, 1]) if np.std(e_n) * np.std(e_d) > 0 else 0.0
 
 
-# ── Main eval loop ────────────────────────────────────────────────────────────
+def compute_ssim(gt: np.ndarray, pred: np.ndarray) -> float:
+    gt_t   = torch.tensor(gt   / 255.0).float().unsqueeze(0).unsqueeze(0)
+    pred_t = torch.tensor(pred / 255.0).float().unsqueeze(0).unsqueeze(0)
+    return pt_ssim(gt_t, pred_t, data_range=1.0, size_average=True).item()
+
+
+# ── Eval loop ─────────────────────────────────────────────────────────────────
 
 def evaluate():
     model = ID_CNN().to(DEVICE)
@@ -103,7 +106,7 @@ def evaluate():
     model.eval()
 
     tfm = transforms.Compose([
-        *([ transforms.Resize(RESIZE)] if RESIZE else []),
+        *([transforms.Resize(RESIZE)] if RESIZE else []),
         transforms.Grayscale(1),
         transforms.ToTensor(),
     ])
@@ -123,24 +126,21 @@ def evaluate():
             print(f"  [skip] no ground truth for {fname}")
             continue
 
-        # Inference
         x = tfm(Image.open(noisy_path).convert('L')).unsqueeze(0).to(DEVICE)
         with torch.no_grad():
             out = torch.clamp(x / (model(x) + 1e-8), 0, 1)
 
         denoised = (out.squeeze().cpu().numpy() * 255).astype(np.uint8)
-        noisy_np = (x.squeeze().cpu().numpy() * 255).astype(np.uint8)
+        noisy_np = (x.squeeze().cpu().numpy()  * 255).astype(np.uint8)
 
-        # Load ground truth at same size
         gt = Image.open(gtruth_path).convert('L')
         if RESIZE:
             gt = gt.resize((RESIZE[1], RESIZE[0]), Image.BILINEAR)
         gt_np = np.array(gt, dtype=np.uint8)
 
-        # Compute metrics
         p    = psnr(gt_np, denoised, data_range=255)
-        s    = ssim(gt_np, denoised, data_range=255)
-        rmse = np.sqrt(np.mean((gt_np.astype(np.float64) - denoised.astype(np.float64))**2))
+        s    = compute_ssim(gt_np, denoised)
+        rmse = np.sqrt(np.mean((gt_np.astype(np.float64) - denoised.astype(np.float64)) ** 2))
         enl  = compute_enl(denoised)
         epi  = compute_epi(noisy_np, denoised)
 

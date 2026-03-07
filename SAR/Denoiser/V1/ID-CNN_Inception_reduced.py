@@ -14,7 +14,6 @@ sys.path.append(str(Path(__file__).parent))
 from helpers import euclidean_TV_loss
 
 
-
 class DenoisingDataset(Dataset):
     def __init__(self, noisy_dir_path, gtruth_dir_path, img_transforms):
 
@@ -136,7 +135,7 @@ def training(epochs, train_dataset, val_dataset, model, device='cuda'):
 
     model = model.to(device)
     optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-5)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,mode='min', patience=5)
+    scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=50, T_mult=2)
     best_val_loss = float('inf')
 
 
