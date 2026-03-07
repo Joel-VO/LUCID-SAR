@@ -6,10 +6,10 @@ import cv2
 import os
 from torchvision import transforms
 from skimage.metrics import peak_signal_noise_ratio as psnr
-from skimage.metrics import structural_similarity as ssim
+from pytorch_msssim import ssim as pt_ssim
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
-WEIGHTS_PATH = "SAR/models/best_denoising_model_Inception_reduced.pth"
+WEIGHTS_PATH = "SAR/models/model_base/idcnn_inception_reduced.pth"
 NOISY_DIR    = "Dataset/SAR_despeckling_filters_Dataset/Main folder/Noisy_val"
 GTRUTH_DIR   = "Dataset/SAR_despeckling_filters_Dataset/Main folder/GTruth_val"
 RESIZE       = (512, 512)
@@ -89,6 +89,10 @@ def compute_epi(noisy: np.ndarray, denoised: np.ndarray) -> float:
     e_n, e_d = sobel(noisy).flatten(), sobel(denoised).flatten()
     return float(np.corrcoef(e_n, e_d)[0, 1]) if np.std(e_n) * np.std(e_d) > 0 else 0.0
 
+def compute_ssim(gt: np.ndarray, pred: np.ndarray) -> float:
+    gt_t   = torch.tensor(gt   / 255.0).float().unsqueeze(0).unsqueeze(0)
+    pred_t = torch.tensor(pred / 255.0).float().unsqueeze(0).unsqueeze(0)
+    return pt_ssim(gt_t, pred_t, data_range=1.0, size_average=True).item()
 
 # ── Eval loop ─────────────────────────────────────────────────────────────────
 
@@ -131,7 +135,7 @@ def evaluate():
         gt_np = np.array(gt, dtype=np.uint8)
 
         p    = psnr(gt_np, denoised, data_range=255)
-        s    = ssim(gt_np, denoised, data_range=255)
+        s    = compute_ssim(gt_np, denoised)
         rmse = np.sqrt(np.mean((gt_np.astype(np.float64) - denoised.astype(np.float64)) ** 2))
         enl  = compute_enl(denoised)
         epi  = compute_epi(noisy_np, denoised)
