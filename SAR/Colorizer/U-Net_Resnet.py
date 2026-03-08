@@ -1,24 +1,36 @@
+# import os
+# os.environ["OMP_NUM_THREADS"] = "1"
+# os.environ["MKL_NUM_THREADS"] = "1"
+# os.environ["OPENBLAS_NUM_THREADS"] = "1"
+
 from fastai.vision.all import *
 import torch
 import torch.nn as nn
 from torchvision.models import resnet34, ResNet34_Weights
+from torchvision.models import vgg16
+import torch.nn.functional as F
 
 sar_path = Path("Dataset/SAR_Color_Dataset/train/sar_images")
 opt_path = Path("Dataset/SAR_Color_Dataset/train/rgb_images")
 
 def get_optical(fn):
-    return opt_path/fn.name
+    return opt_path / fn.name
 
+# Fix: use grayscale-appropriate normalization
 sar_colorizer = DataBlock(
     blocks=(ImageBlock(cls=PILImageBW), ImageBlock),
     get_items=get_image_files,
     get_y=get_optical,
     splitter=RandomSplitter(0.1),
     item_tfms=Resize(512),
-    batch_tfms=Normalize.from_stats(*imagenet_stats)
+    batch_tfms=[
+        *aug_transforms(flip_vert=False, max_rotate=10, max_zoom=1.1),
+        Normalize.from_stats([0.5], [0.5])  # grayscale stats
+    ]
 )
 
-dls = sar_colorizer.dataloaders(sar_path, bs=2, num_workers=0) # worker count = 0 only for python 3.14, lower versions can have more
+dls = sar_colorizer.dataloaders(sar_path, bs=4, num_workers=4)
+
 
 class SARWrapper(nn.Module):
     def __init__(self, model):
@@ -29,6 +41,30 @@ class SARWrapper(nn.Module):
         if x.shape[1] == 1:
             x = x.repeat(1, 3, 1, 1)
         return self.model(x)
+
+
+# Perceptual loss using VGG16 features
+class PerceptualLoss(nn.Module):
+    def __init__(self, weight=0.1):
+        super().__init__()
+        vgg = vgg16(pretrained=True).features[:16].eval()
+        for p in vgg.parameters():
+            p.requires_grad = False
+        self.vgg = vgg
+        self.weight = weight
+        self.l1 = nn.L1Loss()
+
+    def forward(self, pred, target):
+        l1_loss = self.l1(pred, target)
+        # Ensure RGB for VGG
+        if pred.shape[1] == 1:
+            pred = pred.repeat(1, 3, 1, 1)
+        if target.shape[1] == 1:
+            target = target.repeat(1, 3, 1, 1)
+        vgg_pred = self.vgg(pred)
+        vgg_target = self.vgg(target)
+        perceptual_loss = self.l1(vgg_pred, vgg_target)
+        return l1_loss + self.weight * perceptual_loss
 
 
 encoder = resnet34(weights=ResNet34_Weights.DEFAULT)
@@ -42,8 +78,7 @@ unet = DynamicUnet(
 )
 
 model = SARWrapper(unet)
-
-loss_func = L1LossFlat()
+loss_func = PerceptualLoss(weight=0.1)
 
 learn = Learner(
     dls,
@@ -52,6 +87,8 @@ learn = Learner(
     metrics=[mae]
 )
 
-learn.fine_tune(20, base_lr=1e-4)
+# Use fp16 for speed/memory, fit_one_cycle for better convergence
+learn.to_fp16()
+learn.fit_one_cycle(20, lr_max=1e-4)
 
-learn.save("/models/sar_colorizer_unet_resnet34")
+learn.save("models/sar_colorizer_unet_resnet34")
