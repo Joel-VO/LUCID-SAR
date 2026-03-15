@@ -161,7 +161,7 @@ def run_pipeline(input_path, despeckle_weights, colorizer_weights,
     print("Step 2/2: Colorizing...")
     colorized = colorize(denoised, colorizer_weights, colorizer_size, DEVICE)
  
-    # Currently saving, comment out if needed mate
+
     stem = Path(input_path).stem
     if output_path is None:
         output_path = stem + "_colorized.png"
