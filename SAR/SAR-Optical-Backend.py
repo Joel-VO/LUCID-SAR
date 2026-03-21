@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 # ─────────────────────────────────────────────
 # Config  ← edit these
 # ─────────────────────────────────────────────
-INPUT_PATH          = "Dataset/SAR_despeckling_filters_Dataset/Main folder/Noisy_val/5120_2560.tiff"
+INPUT_PATH          = "Dataset/SAR_despeckling_filters_Dataset/Main folder/Noisy_val/5632_4608.tiff"
 DESPECKLE_WEIGHTS   = "SAR/models/denoiser/idcnn_inception_reduced.pth"
 COLORIZER_WEIGHTS   = "SAR/models/Colorizer/generator_final.pt"
 OUTPUT_PATH         = None        # None = auto-name next to input file
